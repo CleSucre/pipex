@@ -2,5 +2,6 @@
 # define PIPEX_PIPEX_H
 
 # include "libft/include/libft.h"
+# include <stdio.h>
 
 #endif
