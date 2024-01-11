@@ -26,34 +26,6 @@ static void	ft_free(char **str)
 	free(str);
 }
 
-// TODO: rework this function
-static char	*get_path(char *cmd, char **envp)
-{
-	int		i;
-	char	*path;
-	char	**paths;
-
-	i = 0;
-	while (ft_strncmp(envp[i], "PATH=", 5) != 0)
-		i++;
-	path = ft_strdup(envp[i] + 5);
-	paths = ft_split(path, ':');
-	i = 0;
-	while (paths[i])
-	{
-		path = ft_strjoin(paths[i], "/");
-		path = ft_strjoin(path, cmd);
-		if (access(path, X_OK) == 0)
-		{
-			return (path);
-		}
-		free(path);
-		i++;
-	}
-	ft_printf("command not found: %s\n", cmd);
-	exit(1);
-}
-
 static void	exec_command(int fdin, char **cmd, char **envp, int fdou)
 {
 	int		pid;
@@ -66,15 +38,22 @@ static void	exec_command(int fdin, char **cmd, char **envp, int fdou)
 	}
 	else if (pid == 0)
 	{
-		path = get_path(cmd[0], envp);
+		path = ft_get_path(cmd[0], envp);
 		dup2(fdin, STDIN_FILENO);
 		dup2(fdou, STDOUT_FILENO);
+		close(fdin);
+		close(fdou);
 		execve(path, cmd, envp);
+		perror("execve");
 		free(path);
+		exit(1);
 	}
-	close(fdin);
-	close(fdou);
-	waitpid(pid, NULL, 0);
+	else
+	{
+		close(fdin);
+		close(fdou);
+		waitpid(pid, NULL, 0);
+	}
 }
 
 int	main(int argc, char **argv, char **envp)
@@ -84,6 +63,11 @@ int	main(int argc, char **argv, char **envp)
 	int		fd[2];
 	char	**cmd;
 
+	if (envp[0] == NULL)
+	{
+		ft_printf("envp is empty\n");
+		return (1);
+	}
 	if (argc == 5)
 	{
 		if (pipe(fd) == -1)
@@ -95,19 +79,13 @@ int	main(int argc, char **argv, char **envp)
 		if (input == -1)
 		{
 			perror("input file");
-			return (2);
-		}
-		output = open(argv[4], O_WRONLY | O_CREAT | O_TRUNC, 0644);
-		if (output == -1)
-		{
-			perror("output file");
-			return (2);
+			return (3);
 		}
 		cmd = ft_split(argv[2], ' ');
 		if (cmd == NULL)
 		{
 			perror("split");
-			return (2);
+			return (5);
 		}
 		exec_command(input, cmd, envp, fd[1]);
 		ft_free(cmd);
@@ -115,12 +93,16 @@ int	main(int argc, char **argv, char **envp)
 		if (cmd == NULL)
 		{
 			perror("split");
-			return (2);
+			return (6);
+		}
+		output = open(argv[4], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+		if (output == -1)
+		{
+			perror("output file");
+			return (4);
 		}
 		exec_command(fd[0], cmd, envp, output);
 		ft_free(cmd);
-		close(input);
-		close(output);
 	}
 	return (0);
 }
