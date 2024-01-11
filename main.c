@@ -26,16 +26,43 @@ static void	ft_free(char **str)
 	free(str);
 }
 
-static void	exec_command(int fdin, char **cmd, char **envp, int fdou)
+static void	child_process(int fdin, int fd[2], char **cmd, char **envp)
 {
 	int		pid;
 	char	*path;
 
 	pid = fork();
 	if (pid < 0)
-	{
 		return ;
+	else if (pid == 0)
+	{
+		close(fd[0]);
+		dup2(fdin, STDIN_FILENO);
+		dup2(fd[1], STDOUT_FILENO);
+		close(fdin);
+		close(fd[1]);
+		path = ft_get_path(cmd[0], envp);
+		execve(path, cmd, envp);
+		perror("execve");
+		free(path);
+		exit(1);
 	}
+	else
+	{
+		close(fdin);
+		close(fd[1]);
+		waitpid(pid, NULL, 0);
+	}
+}
+
+static void	parent_process(int fdin, int fdou, char **cmd, char **envp)
+{
+	int		pid;
+	char	*path;
+
+	pid = fork();
+	if (pid < 0)
+		return ;
 	else if (pid == 0)
 	{
 		path = ft_get_path(cmd[0], envp);
@@ -50,8 +77,8 @@ static void	exec_command(int fdin, char **cmd, char **envp, int fdou)
 	}
 	else
 	{
-		close(fdin);
 		close(fdou);
+		close(fdin);
 		waitpid(pid, NULL, 0);
 	}
 }
@@ -85,24 +112,28 @@ int	main(int argc, char **argv, char **envp)
 		if (cmd == NULL)
 		{
 			perror("split");
-			return (5);
+			return (4);
 		}
-		exec_command(input, cmd, envp, fd[1]);
+		child_process(input, fd, cmd, envp);
 		ft_free(cmd);
 		cmd = ft_split(argv[3], ' ');
 		if (cmd == NULL)
 		{
 			perror("split");
-			return (6);
+			return (5);
 		}
 		output = open(argv[4], O_WRONLY | O_CREAT | O_TRUNC, 0644);
 		if (output == -1)
 		{
 			perror("output file");
-			return (4);
+			return (6);
 		}
-		exec_command(fd[0], cmd, envp, output);
+		parent_process(fd[0], output, cmd, envp);
 		ft_free(cmd);
+		close(input);
+		close(output);
+		close(fd[0]);
+		close(fd[1]);
 	}
 	return (0);
 }
