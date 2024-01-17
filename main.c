@@ -110,12 +110,12 @@ int	main(int argc, char **argv, char **envp)
 	input = open(argv[1], O_RDONLY);
 	if (input == -1 || output == -1)
 		return (4);
-	cmd = ft_split(argv[2], ' ');
+	cmd = ft_split(argv[2], " ");
 	if (cmd == NULL)
 		return (5);
 	child_process(input, fd, cmd, envp);
 	ft_free(cmd);
-	cmd = ft_split(argv[3], ' ');
+	cmd = ft_split(argv[3], " ");
 	if (cmd == NULL)
 		return (6);
 	parent_process(fd[0], output, cmd, envp);
