@@ -83,13 +83,14 @@ static void	parent_process(int fdin, int fdou, char **cmd, char **envp)
 	}
 }
 
-static void	ft_exit_properly(char **cmd, int input, int output, int fd[2])
+static int	ft_exit_properly(char **cmd, int input, int output, int fd[2])
 {
 	ft_free(cmd);
 	close(input);
 	close(output);
 	close(fd[0]);
 	close(fd[1]);
+	return (0);
 }
 
 int	main(int argc, char **argv, char **envp)
@@ -118,5 +119,5 @@ int	main(int argc, char **argv, char **envp)
 	if (cmd == NULL)
 		return (6);
 	parent_process(fd[0], output, cmd, envp);
-	return (0);
+	return (ft_exit_properly(cmd, input, output, fd));
 }
