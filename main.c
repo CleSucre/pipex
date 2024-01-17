@@ -83,6 +83,15 @@ static void	parent_process(int fdin, int fdou, char **cmd, char **envp)
 	}
 }
 
+static void	ft_exit_properly(char **cmd, int input, int output, int fd[2])
+{
+	ft_free(cmd);
+	close(input);
+	close(output);
+	close(fd[0]);
+	close(fd[1]);
+}
+
 int	main(int argc, char **argv, char **envp)
 {
 	int		input;
@@ -91,49 +100,23 @@ int	main(int argc, char **argv, char **envp)
 	char	**cmd;
 
 	if (envp[0] == NULL)
-	{
-		ft_printf("envp is empty\n");
 		return (1);
-	}
-	if (argc == 5)
-	{
-		if (pipe(fd) == -1)
-		{
-			perror("pipe creation");
-			return (2);
-		}
-		input = open(argv[1], O_RDONLY);
-		if (input == -1)
-		{
-			perror("input file");
-			return (3);
-		}
-		cmd = ft_split(argv[2], ' ');
-		if (cmd == NULL)
-		{
-			perror("split");
-			return (4);
-		}
-		child_process(input, fd, cmd, envp);
-		ft_free(cmd);
-		cmd = ft_split(argv[3], ' ');
-		if (cmd == NULL)
-		{
-			perror("split");
-			return (5);
-		}
-		output = open(argv[4], O_WRONLY | O_CREAT | O_TRUNC, 0644);
-		if (output == -1)
-		{
-			perror("output file");
-			return (6);
-		}
-		parent_process(fd[0], output, cmd, envp);
-		ft_free(cmd);
-		close(input);
-		close(output);
-		close(fd[0]);
-		close(fd[1]);
-	}
+	if (argc != 5)
+		return (2);
+	if (pipe(fd) == -1)
+		return (3);
+	output = open(argv[4], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	input = open(argv[1], O_RDONLY);
+	if (input == -1 || output == -1)
+		return (4);
+	cmd = ft_split(argv[2], ' ');
+	if (cmd == NULL)
+		return (5);
+	child_process(input, fd, cmd, envp);
+	ft_free(cmd);
+	cmd = ft_split(argv[3], ' ');
+	if (cmd == NULL)
+		return (6);
+	parent_process(fd[0], output, cmd, envp);
 	return (0);
 }
