@@ -14,48 +14,48 @@
 
 #include "pipex.h"
 
-static void	ft_free(char **str)
+static int	ft_free(char **str)
 {
 	int	i;
 
 	i = 0;
 	while (str[i])
-	{
 		free(str[i++]);
-	}
 	free(str);
+	return (1);
 }
 
-static void	child_process(int fdin, int fd[2], char **cmd, char **envp)
+static char	*ft_get_path_n(char **cmd, char **envp)
 {
-	int		pid;
+	int		i;
 	char	*path;
+	char	**paths;
+	char	*tmp;
 
-	pid = fork();
-	if (pid < 0)
-		return ;
-	else if (pid == 0)
+	if (access(cmd[0], X_OK) == 0)
+		return (cmd[0]);
+	i = 0;
+	while (ft_strncmp(envp[i], "PATH=", 5))
+		i++;
+	paths = ft_split(envp[i] + 5, ":");
+	i = -1;
+	while (paths[++i])
 	{
-		close(fd[0]);
-		dup2(fdin, STDIN_FILENO);
-		dup2(fd[1], STDOUT_FILENO);
-		close(fdin);
-		close(fd[1]);
-		path = ft_get_path(cmd[0], envp);
-		execve(path, cmd, envp);
-		perror("execve");
+		tmp = ft_strjoin(paths[i], "/");
+		path = ft_strjoin(tmp, cmd[0]);
+		free(tmp);
+		if (access(path, X_OK) == 0)
+		{
+			ft_free(paths);
+			return (path);
+		}
 		free(path);
-		exit(1);
 	}
-	else
-	{
-		close(fdin);
-		close(fd[1]);
-		waitpid(pid, NULL, 0);
-	}
+	ft_free(cmd);
+	exit(ft_free(paths));
 }
 
-static void	parent_process(int fdin, int fdou, char **cmd, char **envp)
+void	ft_exec_cmd(int fdin, int fdou, char **cmd, char **envp)
 {
 	int		pid;
 	char	*path;
@@ -65,59 +65,81 @@ static void	parent_process(int fdin, int fdou, char **cmd, char **envp)
 		return ;
 	else if (pid == 0)
 	{
-		path = ft_get_path(cmd[0], envp);
+		path = ft_get_path_n(cmd, envp);
 		dup2(fdin, STDIN_FILENO);
 		dup2(fdou, STDOUT_FILENO);
 		close(fdin);
 		close(fdou);
 		execve(path, cmd, envp);
 		perror("execve");
+		ft_free(cmd);
 		free(path);
 		exit(1);
 	}
-	else
-	{
-		close(fdou);
-		close(fdin);
-		waitpid(pid, NULL, 0);
-	}
+	close(fdou);
+	close(fdin);
+	waitpid(pid, NULL, 0);
 }
 
-static int	ft_exit_properly(char **cmd, int input, int output, int fd[2])
+/**
+ * Execute cmds in the shell and redirect
+ * the output of each command to the 
+ * input of the next one using pipes given in parameter
+ * 
+ * @param fd[2]		pipe files descriptors to communicate
+ * 	input & output between each process
+ * @param input		file descriptor from the input file
+ * @param output	file descriptor from the output file
+ * @param cmds		commands to execute, 
+ * 		cmds[0] ---> intput file
+ * 		cmds[1] ---> first command to execute
+ * 		cmds[2] ---> second command to execute
+ * 		...
+ * 		cmds[n] ---> output file
+ * @param envp		environment variables
+*/
+static void	ft_execute_shell(int input, int output, char **cmds, char **envp)
 {
+	int		i;
+	int		fd[2];
+	char	**cmd;
+	size_t	cmds_len;
+
+	cmds_len = ft_strlentab((const char **) cmds);
+	if (cmds_len < 3)
+		return ;
+	i = 1;
+	while (i < cmds_len - 2)
+	{
+		pipe(fd);
+		cmd = ft_split(cmds[i], " ");
+		ft_exec_cmd(input, fd[1], cmd, envp);
+		input = fd[0];
+		ft_free(cmd);
+		i++;
+	}
+	cmd = ft_split(cmds[i], " ");
+	ft_exec_cmd(input, output, cmd, envp);
 	ft_free(cmd);
-	close(input);
-	close(output);
 	close(fd[0]);
 	close(fd[1]);
-	return (0);
 }
 
 int	main(int argc, char **argv, char **envp)
 {
 	int		input;
 	int		output;
-	int		fd[2];
-	char	**cmd;
 
 	if (envp[0] == NULL)
 		return (1);
-	if (argc != 5)
+	if (argc < 4)
 		return (2);
-	if (pipe(fd) == -1)
-		return (3);
-	output = open(argv[4], O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	input = open(argv[1], O_RDONLY);
+	output = open(argv[argc - 1], O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	if (input == -1 || output == -1)
-		return (4);
-	cmd = ft_split(argv[2], " ");
-	if (cmd == NULL)
-		return (5);
-	child_process(input, fd, cmd, envp);
-	ft_free(cmd);
-	cmd = ft_split(argv[3], " ");
-	if (cmd == NULL)
-		return (6);
-	parent_process(fd[0], output, cmd, envp);
-	return (ft_exit_properly(cmd, input, output, fd));
+		return (3);
+	ft_execute_shell(input, output, argv + 1, envp);
+	close(input);
+	close(output);
+	return (0);
 }

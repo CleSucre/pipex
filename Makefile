@@ -24,7 +24,7 @@ HEAD		= .
 
 LIBFT_DIR	= libft
 
-CFLAGS		= -Wall -Wextra -Werror -I ${HEAD}
+CFLAGS		= -g -I ${HEAD} #-Wall -Wextra -Werror
 
 ${OBJ_PATH}%.o : %.c
 	mkdir -p ${@D} 2> ${DIRSEP}dev${DIRSEP}null || true
