@@ -10,10 +10,17 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-// X_OK means executable
-
 #include "pipex.h"
 
+/**
+ * @brief Get the path of the command to execute
+ *
+ * @param char **cmd
+ * @param char **envp
+ * @param int io[2]
+ * @param int toclose
+ * @return
+ */
 static char	*ft_get_path(char **cmd, char **envp, int io[2], int toclose)
 {
 	int		i;
@@ -41,9 +48,18 @@ static char	*ft_get_path(char **cmd, char **envp, int io[2], int toclose)
 		free(path);
 	}
 	ft_end(cmd, paths, io, toclose);
+    return (NULL);
 }
 
-void	ft_exec_cmd(int io[2], char **cmd, char **envp, int toclose)
+/**
+ * @brief Execute the command
+ *
+ * @param int io[2]
+ * @param char **cmds
+ * @param char **envp
+ * @param int toclose
+ */
+static void	ft_exec_cmd(int io[2], char **cmd, char **envp, int toclose)
 {
 	int		pid;
 	char	*path;
