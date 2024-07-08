@@ -10,7 +10,9 @@ endif
 
 NAME		= pipex
 
-SRCS		= main.c end.c
+SRCS		= main.c command_maker.c path.c executor.c
+
+SRCS		:= $(addprefix src$(DIRSEP), $(SRCS))
 
 OBJ_PATH	= obj${DIRSEP}
 
@@ -20,7 +22,7 @@ OBJS		= ${addprefix ${OBJ_PATH}, ${OBJ_NAME}}
 
 CC			= gcc
 
-HEAD		= .
+HEAD		= includes
 
 LIBFT_DIR	= libft
 

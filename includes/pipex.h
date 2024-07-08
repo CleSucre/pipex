@@ -13,12 +13,38 @@
 #ifndef PIPEX_H
 # define PIPEX_H
 
-# include "libft/include/libft.h"
+# include "../libft/include/libft.h"
 # include <stdio.h>
 # include <sys/wait.h>
 # include <fcntl.h>
 
-void	ft_end(char **cmd, char **paths, int io[2], int toclose);
-void	ft_close(int io[2], int cmds_len, int fd[2]);
+typedef struct s_cmd
+{
+	char	*cmd;
+	char	**args;
+	char	*path;
+	int		input;
+	int		output;
+	int		toclose;
+}			t_cmd;
+
+// ########################################################
+// #					COMMAND_MAKER					  #
+// ########################################################
+
+void	destroy_cmd(t_cmd *cmd);
+t_cmd	*load_command(char *cmd, char **envp, int input, int output);
+
+// ########################################################
+// #					       PATH		    			  #
+// ########################################################
+
+char	*get_path(char *cmd, char **envp);
+
+// ########################################################
+// #					    EXECUTOR	    			  #
+// ########################################################
+
+void	execute_cmds(char **cmds, char **envp, int input, int output);
 
 #endif
