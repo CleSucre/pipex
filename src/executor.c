@@ -20,7 +20,7 @@
  * @param int input
  * @param int output
  */
-void	close_pipe(int cmds_len, int fd[2], int input, int output)
+static void	close_pipe(int cmds_len, int fd[2], int input, int output)
 {
 	if (cmds_len < 3)
 	{
@@ -34,10 +34,8 @@ void	close_pipe(int cmds_len, int fd[2], int input, int output)
 /**
  * @brief Execute the command
  *
- * @param int io[2]
  * @param char **cmds
  * @param char **envp
- * @param int toclose
  */
 static void	ft_exec_cmd(t_cmd *cmd, char **envp)
 {
@@ -64,21 +62,12 @@ static void	ft_exec_cmd(t_cmd *cmd, char **envp)
 }
 
 /**
- * Execute cmds in the shell and redirect
- * the output of each command to the
- * input of the next one using pipes given in parameter
+ * Execute cmds in the right order and manage the pipes between them
  *
- * @param fd[2]		pipe files descriptors to communicate
- * 	input & output between each process
- * @param io[0]		file descriptor from the input file
- * @param io[1]		file descriptor from the output file
- * @param cmds		commands to execute,
- * 		cmds[0] ---> intput file
- * 		cmds[1] ---> first command to execute
- * 		cmds[2] ---> second command to execute
- * 		...
- * 		cmds[n] ---> output file
- * @param envp		environment variables
+ * @param char **cmds		commands to execute,
+ * @param char **envp		environment variables
+ * @param int input			input file descriptor
+ * @param int output		output file descriptor
  */
 void	execute_cmds(char **cmds, char **envp, int input, int output)
 {

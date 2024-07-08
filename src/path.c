@@ -35,9 +35,7 @@ static int	check_path(char *path, char **paths)
  *
  * @param char *cmd
  * @param char **envp
- * @param int io[2]
- * @param int toclose
- * @return
+ * @return char* the path of the command
  */
 char	*get_path(char *cmd, char **envp)
 {
