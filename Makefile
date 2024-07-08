@@ -10,7 +10,7 @@ endif
 
 NAME		= pipex
 
-SRCS		= main.c
+SRCS		= main.c end.c
 
 OBJ_PATH	= obj${DIRSEP}
 
