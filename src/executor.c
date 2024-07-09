@@ -102,14 +102,14 @@ void	execute_cmds(char **cmds, char **envp, int input, int output)
 		close(output);
 		return ;
 	}
-	cmd->toclose = fd[1];
+
 	if (cmds_count > 3)
-		ft_exec_cmd(cmd, envp);
+		cmd->toclose = fd[1];
 	else
-	{
 		cmd->toclose = -1;
-		ft_exec_cmd(cmd, envp);
-	}
+
+	ft_exec_cmd(cmd, envp);
+
 	destroy_cmd(cmd);
 	close_pipe(cmds_count, fd, input, output);
 }
