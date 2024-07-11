@@ -6,7 +6,7 @@
 /*   By: julthoma <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/01/10 18:27:30 by julthoma          #+#    #+#             */
-/*   Updated: 2024/01/10 18:27:30 by julthoma         ###   ########.fr       */
+/*   Updated: 2024/07/11 12:22:21 by julthoma         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 # define PIPEX_H
 
 # include "../libft/include/libft.h"
+# include "custom_termios.h"
 # include <stdio.h>
 # include <sys/wait.h>
 # include <fcntl.h>
@@ -45,6 +46,6 @@ char	*get_path(char *cmd, char **envp);
 // #					    EXECUTOR	    			  #
 // ########################################################
 
-void	execute_cmds(char **cmds, char **envp, int input, int output);
+void	execute_cmds(char **cmds, char **envp, int input, int output, t_term *term);
 
 #endif

@@ -10,7 +10,7 @@ endif
 
 NAME		= pipex
 
-SRCS		= main.c command_maker.c path.c executor.c
+SRCS		= main.c command_maker.c path.c executor.c termios${DIRSEP}termios.c
 
 SRCS		:= $(addprefix src$(DIRSEP), $(SRCS))
 
