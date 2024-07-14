@@ -6,7 +6,7 @@
 /*   By: julthoma <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/11/28 15:30:09 by julthoma          #+#    #+#             */
-/*   Updated: 2024/07/11 12:22:11 by julthoma         ###   ########.fr       */
+/*   Updated: 2024/07/11 17:57:24 by julthoma         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -67,7 +67,9 @@ static int listen_input(char **envp, int input, int output, t_term *term)
 		{
 			write(STDOUT_FILENO, "\n", 1);
 			cmds = split_cmds(cmd);
+			disable_termios(term);
 			execute_cmds(cmds, envp, input, output, term);
+			enable_termios(term);
 			ft_freetab(cmds);
 			free(cmd);
 			cmd = ft_calloc(1, sizeof(char));

@@ -3,104 +3,142 @@
 /*                                                        :::      ::::::::   */
 /*   executor.c                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: julthoma <marvin@42.fr>                    +#+  +:+       +#+        */
+/*   By: julthoma <julthoma@student.42angouleme.f>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/07/08 11:00:00 by julthoma          #+#    #+#             */
-/*   Updated: 2024/07/11 12:23:07 by julthoma         ###   ########.fr       */
+/*   Created: 2024/07/11 09:51:47 by julthoma          #+#    #+#             */
+/*   Updated: 2024/07/11 19:49:55 by julthoma         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "pipex.h"
+#include <signal.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <sys/wait.h>
+
+// Gestionnaire de signal pour SIGCHLD
+void sigchld_handler(int signum)
+{
+	int status;
+	(void)signum;
+
+	// Attendre tous les enfants terminés
+	while (waitpid(-1, &status, WNOHANG) > 0)
+	{
+		// Vous pouvez ajouter du code ici pour traiter le statut si nécessaire
+	}
+}
 
 /**
  * @brief Execute the command
  *
- * @param char **cmds
- * @param char **envp
+ * @param cmd Structure contenant la commande à exécuter
+ * @param envp Environnement
+ * @param term Structure de terminal
+ * @param next_cmds Commandes suivantes
  */
-static void ft_exec_cmd(t_cmd *cmd, char **envp, t_term *term)
+static void ft_exec_cmd(t_cmd *cmd, char **envp, t_term *term, int input, int output, int toclose, char **next_cmds)
 {
-	disable_termios(term);
+	int pipefd[2];
+	char buf;
+
+	if (pipe(pipefd) == -1) {
+		perror("pipe");
+		exit(EXIT_FAILURE);
+	}
+
 	pid_t pid = fork();
 	if (pid == 0)
 	{
-		if (cmd->input != STDIN_FILENO)
+		close(pipefd[0]); // Ferme l'extrémité de lecture du pipe dans le processus enfant
+
+		if (input != STDIN_FILENO)
 		{
-			dup2(cmd->input, STDIN_FILENO);
-			close(cmd->input);
+			dup2(input, STDIN_FILENO);
+			close(input);
 		}
-		if (cmd->output != STDOUT_FILENO)
+		if (output != STDOUT_FILENO)
 		{
-			dup2(cmd->output, STDOUT_FILENO);
-			close(cmd->output);
+			dup2(output, STDOUT_FILENO);
+			close(output);
 		}
-		if (cmd->toclose != -1)
-			close(cmd->toclose);
-		execve(cmd->path, cmd->args, envp);
-		perror("execve");
-		exit(EXIT_FAILURE);
+		if (toclose != -1)
+			close(toclose);
+
+		// Notify the parent that the child is ready
+		write(pipefd[1], "1", 1);
+		close(pipefd[1]); // Close the write end of the pipe
+
+		if (execve(cmd->path, cmd->args, envp) == -1)
+		{
+			perror("execve");
+			exit(EXIT_FAILURE);
+		}
 	}
 	else if (pid > 0)
 	{
-		waitpid(pid, NULL, 0);
-		enable_termios(term);
+		close(pipefd[1]); // Ferme l'extrémité d'écriture du pipe dans le processus parent
+
+		// Attend que l'enfant signale qu'il est prêt
+		read(pipefd[0], &buf, 1);
+		close(pipefd[0]); // Close the read end of the pipe
+
+		// Maintenant que l'enfant a signalé qu'il est prêt, lance les autres commandes
+		if (next_cmds)
+			execute_cmds(next_cmds, envp, input, output, term);
+
+		ft_printf("child process %d started\n", pid);
 	}
 	else
 		perror("fork");
 }
 
-/**
- * Execute cmds in the right order and manage the pipes between them
- *
- * @param char **cmds		commands to execute,
- * @param char **envp		environment variables
- * @param int input			input file descriptor
- * @param int output		output file descriptor
- */
-void	execute_cmds(char **cmds, char **envp, int input, int output, t_term *term)
+void execute_cmds(char **cmds, char **envp, int input, int output, t_term *term)
 {
-	size_t	i;
-	int		fd[2];
-	t_cmd	*cmd;
-	size_t	cmds_count;
+	int fd[2];
+	t_cmd *cmd;
+	size_t cmds_count;
 
 	cmds_count = ft_strlentab((const char **)cmds);
-	i = 0;
-	while (i < cmds_count - 1)
+	if (cmds_count > 0)
 	{
-		pipe(fd);
-		if (pipe(fd) == -1)
+		if (cmds_count > 1)
 		{
-			perror("pipe");
-			exit(EXIT_FAILURE);
+			if (pipe(fd) == -1)
+			{
+				perror("pipe");
+				exit(EXIT_FAILURE);
+			}
+			cmd = load_command(cmds[0], envp, input, fd[1]);
+			if (cmd)
+			{
+				cmd->toclose = fd[0];
+				ft_exec_cmd(cmd, envp, term, input, fd[1], fd[0], cmds + 1);  // Appel récursif pour exécuter la commande suivante
+				destroy_cmd(cmd);
+				close(fd[1]);
+			}
+			if (input != STDIN_FILENO)
+				close(input);
 		}
-		output = fd[1];
-		cmd = load_command(cmds[i], envp, input, output);
-		if (cmd)
+		else
 		{
-			cmd->toclose = fd[0];
-			ft_exec_cmd(cmd, envp, term);
+			cmd = load_command(cmds[0], envp, input, output);
+			if (!cmd)
+			{
+				if (input != STDIN_FILENO)
+					close(input);
+				if (output != STDOUT_FILENO)
+					close(output);
+				return;
+			}
+
+			cmd->toclose = -1;
+			ft_exec_cmd(cmd, envp, term, input, output, -1, NULL);  // Dernière commande, pas de commandes suivantes
 			destroy_cmd(cmd);
-			close(fd[1]);
+			if (input != STDIN_FILENO)
+				close(input);
 		}
-		if (input != STDIN_FILENO)
-			close(input);
-		input = fd[0];
-		i++;
 	}
-	cmd = load_command(cmds[i], envp, input, output);
-	if (!cmd)
-	{
-		close(input);
-		close(output);
-		return ;
-	}
-
-	cmd->toclose = -1;
-
-	ft_exec_cmd(cmd, envp, term);
-
-	destroy_cmd(cmd);
-	if (input != STDIN_FILENO)
-		close(input);
 }
